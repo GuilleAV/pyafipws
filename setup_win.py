@@ -21,7 +21,7 @@ import sys
 
 __version__ = "3.10.0000"
 
-HOMO = True
+HOMO = False
 
 # build a one-click-installer for windows:
 import py2exe
@@ -29,16 +29,16 @@ from pyafipws.nsis import build_installer, Target
 
 # modulos a compilar y empaquetar (comentar si no se desea incluir):
 
-#import pyafipws
+import pyafipws
 #import pyrece
 from pyafipws import wsaa
 from pyafipws import wsfev1, rece1, rg3685
-#import wsfexv1, recex1
+import wsfexv1, recex1
 #import wsbfev1, receb1
 #import wsmtx, recem
 #import wsct, recet
-#import wsfecred
-#import ws_sr_padron
+import wsfecred
+import ws_sr_padron
 #from pyafipws import pyfepdf
 #import pyemail
 #import pyi25
@@ -49,7 +49,7 @@ from pyafipws import wsfev1, rece1, rg3685
 #import wsltv
 #import wslum
 #import wslsp
-#import wsremcarne
+import wsremcarne
 #import wsremharina
 #import wsremazucar
 #import wscoc
@@ -61,7 +61,7 @@ from pyafipws import wsfev1, rece1, rg3685
 #import trazarenpre
 #import trazafito
 #import trazavet
-#import padron
+import padron
 #import sired
 
 data_files = [
