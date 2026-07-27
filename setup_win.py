@@ -53,7 +53,7 @@ import wsremcarne
 #import wsremharina
 #import wsremazucar
 #import wscoc
-#import wscdc
+import wscdc
 #import cot
 #import iibb
 #import trazamed
