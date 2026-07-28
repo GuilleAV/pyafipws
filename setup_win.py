@@ -19,7 +19,16 @@ import subprocess
 import warnings
 import sys
 
-__version__ = "3.10.0000"
+try:
+    rev = subprocess.check_output(
+        ["git", "rev-list", "--count", "--all"], stderr=subprocess.PIPE
+    ).strip()
+    if not isinstance(rev, str):
+        rev = rev.decode("ascii")
+except Exception:
+    rev = "0000"
+
+__version__ = "2.7.%s" % rev
 
 HOMO = False
 
