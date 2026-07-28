@@ -1,145 +1,145 @@
-# This workflow will install Python dependencies, build EXE and run some tests in Windows
-# For more information see: https://github.com/py2exe/py2exe/blob/master/.github/workflows/CI.yml
+# This workflow builds the legacy Windows installer with local Python 2.7 x64.
+# It requires a self-hosted Windows x64 runner with C:\Python27 and NSIS installed.
 
 name: Windows Installer
 
-on: [push]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   compile:
+    name: compile (Python 2.7, x64)
+    runs-on: [self-hosted, Windows, X64]
 
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10"]
-        targetplatform: [x86, x64]
+    env:
+      PY27: C:\Python27\python.exe
+      PIP27: C:\Python27\Scripts\pip.exe
+      MAKENSIS: C:\Program Files (x86)\NSIS\makensis.exe
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-        architecture : ${{ matrix.targetplatform }}
-    - name: Upgrade the package manager and related libraries
+
+    - name: Verify Python 2.7 x64 toolchain
+      shell: powershell
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install "setuptools==65.5.0" wheel
-        python -m pip install --upgrade cachetools pefile
-    - name: Install production dependencies
+        if (!(Test-Path $env:PY27)) { throw "Python 2.7 not found at $env:PY27" }
+        if (!(Test-Path $env:PIP27)) { throw "pip for Python 2.7 not found at $env:PIP27" }
+        if (!(Test-Path $env:MAKENSIS)) { throw "NSIS makensis not found at $env:MAKENSIS" }
+        $env:Path = "C:\Python27;C:\Python27\Scripts;C:\Program Files (x86)\NSIS;$env:Path"
+        & $env:PY27 --version
+        & $env:PY27 -c "import sys, struct; assert sys.version_info[:2] == (2, 7); assert struct.calcsize('P') * 8 == 64; print('Python 2.7 x64 ok')"
+        & $env:PY27 -c "import py2exe, win32com; print('py2exe and pywin32 ok')"
+
+    - name: Install Python 2.7 dependencies
+      shell: powershell
       run: |
-        pip install -r requirements.txt
-    - name: Install development dependencies
-      run: |
-        pip install -r requirements-dev.txt
-    - name: Remove python2 library conflicts with py2exe
-      run: |
-        python -c "import aenum, os; os.unlink(os.path.join(os.path.dirname(aenum.__file__), '_py2.py'))"
+        $env:Path = "C:\Python27;C:\Python27\Scripts;$env:Path"
+        & $env:PIP27 install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org -r requirements.txt
+        & $env:PIP27 install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org cachetools pefile
+
     - name: Install package
+      shell: powershell
       run: |
-        python setup.py install
+        $env:Path = "C:\Python27;C:\Python27\Scripts;$env:Path"
+        & $env:PY27 setup.py install
+
     - name: Build executables
+      shell: powershell
       run: |
-        python setup_win.py py2exe
+        $env:Path = "C:\Python27;C:\Python27\Scripts;C:\Program Files (x86)\NSIS;$env:Path"
+        & $env:PY27 setup_win.py py2exe
+
     - name: List dist folder contents
+      shell: powershell
       run: |
-        dir .\dist
-    - name: Download Visual Studio Redistributable (32bits)
-      if: matrix.targetplatform == 'x86'
+        Get-ChildItem -Recurse .\dist
+
+    - name: Download Visual Studio Redistributable x64
+      shell: powershell
       run: |
-        curl -L https://aka.ms/vs/17/release/vc_redist.x86.exe -o vcredist.exe
-    - name: Download Visual Studio 22 Redistributable (64bits)
-      if: matrix.targetplatform != 'x86'
-      run: |
-        curl -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o vcredist.exe
+        curl.exe -L https://aka.ms/vs/17/release/vc_redist.x64.exe -o vcredist.exe
+
     - name: Copy Visual Studio Redistributable
+      shell: powershell
       run: |
-        copy vcredist.exe .\dist\
-    - name: Install NSIS for building Installers
-      run: |
-        curl -L https://sourceforge.net/projects/nsis/files/latest/download -o NSISInstaller.exe
-        Start-Process -FilePath "NSISInstaller.exe" -ArgumentList "/S" -Wait
-        del "NSISInstaller.exe"
+        Copy-Item vcredist.exe .\dist\
+
     - name: Build PyAfipWs Installer
+      shell: powershell
       run: |
-        makensis.exe base.nsi
+        & $env:MAKENSIS base.nsi
+
     - name: Remove uneeded libs (TK)
+      shell: powershell
       run: |
-        Remove-Item .\dist\lib\tcl -recurse
-        Remove-Item .\dist\lib\tk -recurse
+        Remove-Item .\dist\lib\tcl -Recurse -ErrorAction SilentlyContinue
+        Remove-Item .\dist\lib\tk -Recurse -ErrorAction SilentlyContinue
+
     - name: Copy PowerShell tests into the release artifact
+      shell: powershell
       run: |
-        mkdir .\dist\tests
-        copy .\tests\powershell\*.* .\dist\tests
+        New-Item -ItemType Directory -Force .\dist\tests
+        Copy-Item .\tests\powershell\*.* .\dist\tests\ -ErrorAction SilentlyContinue
+
     - name: Save repository metadata for release env-vars
+      shell: powershell
       run: |
-        echo release_version="${{ matrix.python-version }}".$(git rev-list --count --all) > dist/.env
-        echo git_short_hash=$(git rev-parse --short head) >> dist/.env
-        echo git_branch=$(git branch --show-current) >> dist/.env
-        echo workflow trigger: "${{ github.ref }}" - "${{ github.ref_name }}"
-        type dist/.env
+        "release_version=2.7.$(git rev-list --count --all)" | Out-File -Encoding ascii dist/.env
+        "git_short_hash=$(git rev-parse --short HEAD)" | Add-Content -Encoding ascii dist/.env
+        "git_branch=$(git branch --show-current)" | Add-Content -Encoding ascii dist/.env
+        Get-Content dist/.env
+
     - name: Deploy distribution binaries
       uses: actions/upload-artifact@v4
       with:
-        name: dist-${{ matrix.targetplatform }}
+        name: dist-x64
         include-hidden-files: true
         path: |
           dist/
+
     - name: Deploy PyAfipWs Installer
       uses: actions/upload-artifact@v4
       with:
-        name: PyAfipWs-Installer-${{ matrix.targetplatform }}
+        name: PyAfipWs-Installer-x64
         path: |
           **/PyAfipWs-*.exe
 
- 
   pre-release:
-    name: "Pre Release"
+    name: Pre Release
     needs: compile
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
 
     steps:
       - name: Download 64Bit Installer
         uses: actions/download-artifact@v4.1.7
         with:
           name: PyAfipWs-Installer-x64
-          path: PyAfipWs-Installer-x64.exe
-      - name: Download 32bit Installer
-        uses: actions/download-artifact@v4.1.7
-        with:
-          name: PyAfipWs-Installer-x86
-          path: PyAfipWs-Installer-x86.exe
-      - name: Download distribution binaries
-        uses: actions/download-artifact@v4.1.7
-        with:
-          name: dist-x86
-          path: dist-32
-      - name: Create ZIP archive
-        run: |
-          zip dist-32.zip -r dist-32
+          path: PyAfipWs-Installer-x64
+
       - name: Download distribution binaries
         uses: actions/download-artifact@v4.1.7
         with:
           name: dist-x64
           path: dist-64
+
       - name: Create ZIP archive
         run: |
           zip dist-64.zip -r dist-64
+
       - name: Set release env-vars
         run: |
           cat dist-64/.env >> $GITHUB_ENV
-      - uses: "marvinpinto/action-automatic-releases@latest"
+
+      - uses: marvinpinto/action-automatic-releases@latest
         if: github.actor != 'dependabot[bot]'
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: ${{ (github.ref_name != 'main') && 'beta' || 'latest' }}
-          prerelease: ${{ (github.ref != 'main') }}
+          prerelease: ${{ (github.ref_name != 'main') }}
           title: "Dev Build ${{ env.release_version }} ${{ env.git_branch }} @ ${{ env.git_short_hash }}"
           files: |
-            PyAfipWs-Installer-x64.exe
-            PyAfipWs-Installer-x86.exe
-            dist-32.zip
+            PyAfipWs-Installer-x64/**/*.exe
             dist-64.zip
