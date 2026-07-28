@@ -40,11 +40,19 @@ jobs:
         & $env:PIP27 install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org -r requirements.txt
         & $env:PIP27 install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org cachetools pefile
 
+    - name: Remove stale installed PyAfipWs packages
+      shell: powershell
+      run: |
+        Remove-Item C:\Python27\Lib\site-packages\pyafipws -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item C:\Python27\Lib\site-packages\PyAfipWs-*.egg -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Item C:\Python27\Lib\site-packages\PyAfipWs-*.dist-info -Recurse -Force -ErrorAction SilentlyContinue
+
     - name: Install package
       shell: powershell
       run: |
         $env:Path = "C:\Python27;C:\Python27\Scripts;$env:Path"
         & $env:PY27 setup.py install
+        & $env:PY27 -c "import pyafipws, pyafipws.utils; print(pyafipws.__file__); print(pyafipws.utils.__file__); assert hasattr(pyafipws.utils, 'date')"
 
     - name: Build executables
       shell: powershell
