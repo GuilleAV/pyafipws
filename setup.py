@@ -25,7 +25,7 @@ except:
 
 __version__ = "%s.%s.%s" % (sys.version_info[0:2] + (rev, ))
 
-HOMO = True
+HOMO = False
 
 # build a one-click-installer for windows:
 if 'py2exe' in sys.argv:
@@ -38,26 +38,26 @@ if 'py2exe' in sys.argv:
     #import pyrece
     import wsaa
     import wsfev1, rece1, rg3685
-    #import wsfexv1, recex1
-    #import wsbfev1, receb1
-    #import wsmtx, recem
+    import wsfexv1, recex1
+    import wsbfev1, receb1
+    import wsmtx, recem
     #import wsct, recet
-    #import wsfecred
-    #import ws_sr_padron
+    import wsfecred
+    import ws_sr_padron
     import pyfepdf
     #import pyemail
     #import pyi25
     import pyqr
     #import ws_sire
     #import wsctg
-    #import wslpg
+    import wslpg
     #import wsltv
     #import wslum
     #import wslsp
-    #import wsremcarne
-    #import wsremharina
-    #import wsremazucar
-    #import wscoc
+    import wsremcarne
+    import wsremharina
+    import wsremazucar
+    import wscoc
     #import wscdc
     #import cot
     #import iibb
@@ -66,7 +66,7 @@ if 'py2exe' in sys.argv:
     #import trazarenpre
     #import trazafito
     #import trazavet
-    #import padron
+    import padron
     #import sired
 
     data_files = [
